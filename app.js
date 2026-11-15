@@ -140,7 +140,10 @@ if (typeof module !== 'undefined' && module.exports) {
   function $(id) { return document.getElementById(id); }
   function seedRng() { return PG.makeRng((Date.now() ^ (Math.random() * 1e9)) >>> 0); }
 
-  var state = { ws: null, wsShow: false, cw: null, cwShow: false, su: null, suShow: false, mz: null, mzShow: false };
+  var state = {
+    ws: null, wsShow: false, cw: null, cwShow: false, su: null, suShow: false,
+    mz: null, mzShow: false, my: null, myShow: false
+  };
 
   function initApp() {
     initTabs();
@@ -148,6 +151,7 @@ if (typeof module !== 'undefined' && module.exports) {
     initCrossword();
     initSudoku();
     initMaze();
+    initMystery();
     if (window.BookBuilder) BookBuilder.init(seedRng);
     // friendly first screen: pre-generate a word search
     $('ws-generate').click();
@@ -198,6 +202,7 @@ if (typeof module !== 'undefined' && module.exports) {
       state.ws = PG.generateWordSearch(words, size, seedRng());
       state.wsShow = false;
       $('ws-solution').disabled = false;
+      $('ws-png').disabled = false;
       $('ws-solution').textContent = 'Show Solution';
       $('ws-status').textContent = 'Placed ' + state.ws.placements.length + ' of ' +
         (state.ws.placements.length + state.ws.unplaced.length) + ' words' +
@@ -209,6 +214,12 @@ if (typeof module !== 'undefined' && module.exports) {
       state.wsShow = !state.wsShow;
       $('ws-solution').textContent = state.wsShow ? 'Hide Solution' : 'Show Solution';
       drawWordSearch();
+    });
+
+    $('ws-png').addEventListener('click', function () {
+      if (!state.ws) return;
+      var theme = sel.value === '__custom' ? 'Word Search' : sel.value + ' Word Search';
+      PNGExport.downloadPNG('word-search', state.ws, { solution: state.wsShow, title: theme });
     });
   }
 
@@ -246,6 +257,7 @@ if (typeof module !== 'undefined' && module.exports) {
       state.cw = PG.generateCrossword(entries, seedRng());
       state.cwShow = false;
       $('cw-solution').disabled = false;
+      $('cw-png').disabled = false;
       $('cw-solution').textContent = 'Show Solution';
       $('cw-status').textContent = 'Placed ' + state.cw.placements.length + ' of ' + entries.length +
         ' words' + (state.cw.unplaced.length ? ' — not placed: ' + state.cw.unplaced.join(', ') : '');
@@ -255,6 +267,9 @@ if (typeof module !== 'undefined' && module.exports) {
       state.cwShow = !state.cwShow;
       $('cw-solution').textContent = state.cwShow ? 'Hide Solution' : 'Show Solution';
       drawCrossword();
+    });
+    $('cw-png').addEventListener('click', function () {
+      if (state.cw) PNGExport.downloadPNG('crossword', state.cw, { solution: state.cwShow });
     });
   }
 
@@ -275,6 +290,7 @@ if (typeof module !== 'undefined' && module.exports) {
         state.su = PG.generateSudoku(diff, seedRng());
         state.suShow = false;
         $('su-solution').disabled = false;
+        $('su-png').disabled = false;
         $('su-solution').textContent = 'Show Solution';
         $('su-status').textContent = 'Difficulty: ' + diff + ' · ' + state.su.givens +
           ' clues given · unique solution guaranteed.';
@@ -285,6 +301,14 @@ if (typeof module !== 'undefined' && module.exports) {
       state.suShow = !state.suShow;
       $('su-solution').textContent = state.suShow ? 'Hide Solution' : 'Show Solution';
       drawSudoku();
+    });
+    $('su-png').addEventListener('click', function () {
+      if (state.su) {
+        PNGExport.downloadPNG('sudoku', state.su, {
+          solution: state.suShow,
+          title: 'Sudoku (' + state.su.difficulty + ')'
+        });
+      }
     });
   }
 
@@ -301,6 +325,7 @@ if (typeof module !== 'undefined' && module.exports) {
       state.mz = PG.generateMaze(size, size, seedRng());
       state.mzShow = false;
       $('mz-solution').disabled = false;
+      $('mz-png').disabled = false;
       $('mz-solution').textContent = 'Show Solution';
       drawMaze();
     });
@@ -309,6 +334,47 @@ if (typeof module !== 'undefined' && module.exports) {
       $('mz-solution').textContent = state.mzShow ? 'Hide Solution' : 'Show Solution';
       drawMaze();
     });
+    $('mz-png').addEventListener('click', function () {
+      if (state.mz) PNGExport.downloadPNG('maze', state.mz, { solution: state.mzShow });
+    });
+  }
+
+  /* ----- Mystery ----- */
+
+  function initMystery() {
+    $('my-generate').addEventListener('click', function () {
+      var size = parseInt($('my-size').value, 10) === 5 ? 5 : 4;
+      $('my-status').textContent = 'Building your case…';
+      // let the label paint before the (synchronous) generation
+      setTimeout(function () {
+        try {
+          state.my = PG.generateMystery(seedRng(), { size: size });
+          state.myShow = false;
+          $('my-solution').disabled = false;
+          $('my-png').disabled = false;
+          $('my-solution').textContent = 'Show Solution';
+          $('my-status').textContent = state.my.title + ' — ' + state.my.suspects.length +
+            ' suspects, ' + state.my.clues.length + ' clues, one unique solution. ' +
+            'The culprit: one of ' + state.my.suspects.map(function (s) { return s.name; }).join(', ') + '.';
+          drawMystery();
+        } catch (err) {
+          $('my-status').textContent = 'Something went wrong building the case: ' + err.message;
+        }
+      }, 10);
+    });
+    $('my-solution').addEventListener('click', function () {
+      state.myShow = !state.myShow;
+      $('my-solution').textContent = state.myShow ? 'Hide Solution' : 'Show Solution';
+      drawMystery();
+    });
+    $('my-png').addEventListener('click', function () {
+      if (state.my) PNGExport.downloadPNG('mystery', state.my, { solution: state.myShow });
+    });
+  }
+
+  function drawMystery() {
+    if (!state.my) return;
+    $('my-output').innerHTML = Render.mysteryHTML(state.my, { solution: state.myShow });
   }
 
   function drawMaze() {

@@ -482,6 +482,370 @@
     return path;
   }
 
+  /* ---------------- Mystery (whodunit logic-grid) ---------------- */
+  /*
+   * A case: one setting, a victim, N suspects, N weapons, N rooms.
+   * Hidden truth = two permutations (which suspect had which weapon,
+   * which suspect was in which room) plus a designated culprit.
+   * Clues are structured objects {type, ..., text}; every clue is
+   * generated FROM the hidden assignment (so it is true by
+   * construction) and re-verified with mysteryClueHolds. The clue set
+   * is then chosen greedily so that solveMystery() — a full
+   * enumeration of the permutation space — finds EXACTLY ONE
+   * solution, and that solution is checked to be the hidden
+   * assignment before the case is returned. Uniqueness is therefore
+   * guaranteed, never hoped for.
+   */
+
+  var MYSTERY_SETTINGS = [
+    {
+      name: 'Blackwood Manor',
+      caseTitle: 'The Blackwood Manor Case',
+      victim: 'Lord Henry Blackwood',
+      intro: 'Lord Henry Blackwood was found dead in Blackwood Manor shortly after midnight, ' +
+        'at the end of a dinner party held to announce changes to his will. The doors were ' +
+        'locked from the inside, and no one could have left the house.',
+      suspects: [
+        { name: 'Mrs. Eleanor Vane', desc: "the victim's sister-in-law, twice passed over in his will" },
+        { name: 'Colonel Arthur Brandt', desc: 'a retired army friend who owed the victim a large debt' },
+        { name: 'Miss Clara Whitfield', desc: "the victim's secretary, keeper of all his private papers" },
+        { name: 'Dr. Felix Marlowe', desc: 'the family physician, called to the house that evening' },
+        { name: 'Mr. Tobias Grey', desc: 'a business partner whose company the victim was about to dissolve' }
+      ],
+      weapons: ['Candlestick', 'Revolver', 'Rope', 'Lead Pipe', 'Dagger'],
+      rooms: ['Library', 'Study', 'Conservatory', 'Billiard Room', 'Dining Room']
+    },
+    {
+      name: 'The Night Train to Vienna',
+      caseTitle: 'The Night Train Case',
+      victim: 'Madame Olga Petrovna',
+      intro: 'Madame Olga Petrovna, a retired opera singer travelling with a famous emerald, ' +
+        'was found dead aboard the night train to Vienna. The train had not stopped since ' +
+        'midnight, so the culprit was still in the first-class carriage.',
+      suspects: [
+        { name: 'Mr. Henri Fabre', desc: 'a jewel dealer who had appraised the emerald that week' },
+        { name: 'Miss Ingrid Halvorsen', desc: "the victim's travelling companion and former understudy" },
+        { name: 'Mr. Stefan Kovac', desc: 'a quiet engineer sharing the first-class carriage' },
+        { name: 'Mrs. Beatrice Lang', desc: 'a novelist gathering material for a crime story' },
+        { name: 'Mr. Yusuf Demir', desc: 'the sleeping-car attendant on duty that night' }
+      ],
+      weapons: ['Letter Opener', 'Silk Cord', 'Poison Flask', 'Revolver', 'Brass Lamp'],
+      rooms: ['Sleeper Cabin', 'Dining Car', 'Observation Car', 'Luggage Van', 'Smoking Car']
+    },
+    {
+      name: 'The Grand Palms Hotel',
+      caseTitle: 'The Grand Palms Hotel Case',
+      victim: 'Mr. Reginald Pierce',
+      intro: 'Mr. Reginald Pierce, a property tycoon, was found dead at the Grand Palms Hotel ' +
+        'in the early hours after the summer ball. The hotel register showed exactly who ' +
+        'had been inside the building all night.',
+      suspects: [
+        { name: 'Miss Vivienne Cross', desc: 'a singer engaged for the season at the hotel' },
+        { name: 'Mr. Douglas Hale', desc: 'the hotel manager, whose books the victim had demanded to audit' },
+        { name: 'Mrs. Constance Reid', desc: 'a wealthy widow and long-standing guest of the hotel' },
+        { name: 'Mr. Marco Bellini', desc: 'the head chef, dismissed by the victim that very morning' },
+        { name: 'Miss Harriet Bloom', desc: 'a journalist staying at the hotel under a false name' }
+      ],
+      weapons: ['Fire Poker', 'Broken Bottle', 'Silk Scarf', 'Revolver', 'Marble Paperweight'],
+      rooms: ['Ballroom', 'Terrace', 'Lobby', 'Spa', 'Penthouse Suite']
+    },
+    {
+      name: 'The Ashworth Museum',
+      caseTitle: 'The Ashworth Museum Case',
+      victim: 'Professor Edmund Ashworth',
+      intro: 'Professor Edmund Ashworth, founder of the Ashworth Museum, was found dead among ' +
+        'the exhibits on the night of the annual gala. The alarm had been set at midnight, ' +
+        'so the culprit was one of the few people still inside.',
+      suspects: [
+        { name: 'Dr. Miriam Solano', desc: 'the curator of antiquities, passed over for the directorship' },
+        { name: 'Mr. Nathaniel Pryce', desc: 'an art dealer whose prize exhibit the victim had called a forgery' },
+        { name: 'Miss Odette Marchand', desc: 'a restorer who worked alone in the galleries at night' },
+        { name: 'Mr. Silas Thorne', desc: 'the night watchman, employed at the museum for thirty years' },
+        { name: 'Mrs. Helena Voss', desc: 'a patron whose large donation the victim had publicly refused' }
+      ],
+      weapons: ['Bronze Statuette', 'Ceremonial Dagger', 'Velvet Cord', 'Poisoned Wine', 'Antique Pistol'],
+      rooms: ['Egyptian Gallery', 'Sculpture Hall', 'Library Wing', 'Rooftop Garden', 'Vault Room']
+    },
+    {
+      name: 'The Royal Theatre',
+      caseTitle: 'The Royal Theatre Case',
+      victim: 'Mr. Sebastian Crowe',
+      intro: 'Mr. Sebastian Crowe, the leading actor of the Royal Theatre, was found dead in ' +
+        'the wings minutes before the curtain rose on opening night. The performance was ' +
+        'cancelled, and nobody was allowed to leave the building.',
+      suspects: [
+        { name: 'Miss Rosalind Fair', desc: 'the leading lady, whose role the victim had tried to give away' },
+        { name: 'Mr. Victor Hale', desc: 'the director, locked in a public feud with the victim' },
+        { name: 'Mrs. Agnes Pruitt', desc: 'the costume mistress, at the theatre for forty years' },
+        { name: 'Mr. Leo Marchetti', desc: 'the understudy, still waiting for his first big break' },
+        { name: 'Miss Daphne Wren', desc: 'the stage manager, who knew every corner of the building' }
+      ],
+      weapons: ['Stage Dagger', 'Curtain Cord', 'Brass Candelabra', 'Poisoned Snuffbox', 'Fire Iron'],
+      rooms: ['Stage', 'Dressing Room', 'Orchestra Pit', 'Box Office', 'Green Room']
+    }
+  ];
+
+  function permutations(arr) {
+    if (arr.length <= 1) return [arr.slice()];
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var rest = arr.slice(0, i).concat(arr.slice(i + 1));
+      permutations(rest).forEach(function (p) { out.push([arr[i]].concat(p)); });
+    }
+    return out;
+  }
+
+  /* Which suspect holds `weapon` in assignment a ({weaponOf, roomOf})? */
+  function mysteryHolderOf(a, weapon) {
+    for (var name in a.weaponOf) {
+      if (a.weaponOf[name] === weapon) return name;
+    }
+    return null;
+  }
+
+  /* The single source of truth for clue semantics. */
+  function mysteryClueHolds(clue, a) {
+    switch (clue.type) {
+      case 'room_is': return a.roomOf[clue.suspect] === clue.room;
+      case 'room_not': return a.roomOf[clue.suspect] !== clue.room;
+      case 'weapon_is': return a.weaponOf[clue.suspect] === clue.weapon;
+      case 'weapon_not': return a.weaponOf[clue.suspect] !== clue.weapon;
+      case 'weapon_room_is': return a.roomOf[mysteryHolderOf(a, clue.weapon)] === clue.room;
+      case 'weapon_room_not': return a.roomOf[mysteryHolderOf(a, clue.weapon)] !== clue.room;
+      case 'either_room':
+        return a.roomOf[clue.suspect] === clue.rooms[0] ||
+               a.roomOf[clue.suspect] === clue.rooms[1];
+      case 'either_weapon':
+        return a.weaponOf[clue.suspect] === clue.weapons[0] ||
+               a.weaponOf[clue.suspect] === clue.weapons[1];
+    }
+    return false;
+  }
+
+  function allMysteryAssignments(names, weapons, rooms) {
+    var wPerms = permutations(weapons), rPerms = permutations(rooms);
+    var out = [];
+    wPerms.forEach(function (wp) {
+      rPerms.forEach(function (rp) {
+        var weaponOf = {}, roomOf = {};
+        names.forEach(function (n, i) { weaponOf[n] = wp[i]; roomOf[n] = rp[i]; });
+        out.push({ weaponOf: weaponOf, roomOf: roomOf });
+      });
+    });
+    return out;
+  }
+
+  /*
+   * Full enumeration solver: returns up to `cap` assignments that
+   * satisfy every clue. Callers pass cap=2 to test uniqueness.
+   */
+  function solveMystery(names, weapons, rooms, clues, cap) {
+    cap = cap || 2;
+    var all = allMysteryAssignments(names, weapons, rooms);
+    var sols = [];
+    for (var i = 0; i < all.length && sols.length < cap; i++) {
+      var ok = true;
+      for (var j = 0; j < clues.length; j++) {
+        if (!mysteryClueHolds(clues[j], all[i])) { ok = false; break; }
+      }
+      if (ok) sols.push(all[i]);
+    }
+    return sols;
+  }
+
+  function sameAssignment(a, b, names) {
+    for (var i = 0; i < names.length; i++) {
+      if (a.weaponOf[names[i]] !== b.weaponOf[names[i]]) return false;
+      if (a.roomOf[names[i]] !== b.roomOf[names[i]]) return false;
+    }
+    return true;
+  }
+
+  /*
+   * Build the pool of candidate clues for a hidden assignment.
+   * Every clue is constructed to be true, then filtered through
+   * mysteryClueHolds anyway (defence in depth) and de-duplicated.
+   */
+  function buildMysteryCandidates(names, weapons, rooms, a) {
+    var raw = [];
+    function add(clue) { raw.push(clue); }
+    names.forEach(function (s) {
+      var myRoom = a.roomOf[s], myWeapon = a.weaponOf[s];
+      add({ type: 'room_is', suspect: s, room: myRoom,
+        text: s + ' was in the ' + myRoom + '.' });
+      add({ type: 'weapon_is', suspect: s, weapon: myWeapon,
+        text: s + ' had the ' + myWeapon + '.' });
+      rooms.forEach(function (r) {
+        if (r === myRoom) return;
+        add({ type: 'room_not', suspect: s, room: r,
+          text: s + ' was not in the ' + r + '.' });
+        add({ type: 'either_room', suspect: s, rooms: [myRoom, r],
+          text: s + ' was in either the ' + myRoom + ' or the ' + r + '.' });
+      });
+      weapons.forEach(function (w) {
+        if (w === myWeapon) return;
+        add({ type: 'weapon_not', suspect: s, weapon: w,
+          text: s + ' did not have the ' + w + '.' });
+        add({ type: 'either_weapon', suspect: s, weapons: [myWeapon, w],
+          text: s + ' had either the ' + myWeapon + ' or the ' + w + '.' });
+      });
+    });
+    weapons.forEach(function (w) {
+      var holder = mysteryHolderOf(a, w);
+      var holderRoom = a.roomOf[holder];
+      add({ type: 'weapon_room_is', weapon: w, room: holderRoom,
+        text: 'The suspect with the ' + w + ' was in the ' + holderRoom + '.' });
+      rooms.forEach(function (r) {
+        if (r === holderRoom) return;
+        add({ type: 'weapon_room_not', weapon: w, room: r,
+          text: 'The suspect with the ' + w + ' was not in the ' + r + '.' });
+      });
+    });
+    var seenText = {}, pool = [];
+    raw.forEach(function (clue) {
+      if (seenText[clue.text]) return;
+      if (!mysteryClueHolds(clue, a)) return; // must be true — guaranteed, but verify
+      seenText[clue.text] = true;
+      pool.push(clue);
+    });
+    return pool;
+  }
+
+  function generateMystery(rng, opts) {
+    rng = rng || Math.random;
+    opts = opts || {};
+    var size = opts.size === 5 ? 5 : 4;
+    var MIN_CLUES = 6, MAX_CLUES = 10;
+
+    for (var attempt = 0; attempt < 8; attempt++) {
+      var setting = pick(rng, MYSTERY_SETTINGS);
+      var suspects = shuffle(setting.suspects.slice(), rng).slice(0, size);
+      var weapons = shuffle(setting.weapons.slice(), rng).slice(0, size);
+      var rooms = shuffle(setting.rooms.slice(), rng).slice(0, size);
+      var names = suspects.map(function (s) { return s.name; });
+
+      // hidden truth: two random permutations + a designated culprit
+      var wPerm = shuffle(weapons.slice(), rng);
+      var rPerm = shuffle(rooms.slice(), rng);
+      var assignment = { weaponOf: {}, roomOf: {} };
+      names.forEach(function (n, i) {
+        assignment.weaponOf[n] = wPerm[i];
+        assignment.roomOf[n] = rPerm[i];
+      });
+      var culprit = pick(rng, names);
+
+      var pool = buildMysteryCandidates(names, weapons, rooms, assignment);
+      var all = allMysteryAssignments(names, weapons, rooms);
+
+      // Bitmask per candidate over the assignment space, so greedy
+      // selection stays fast even at size 5 (120 x 120 assignments).
+      var masks = pool.map(function (clue) {
+        var m = new Uint8Array(all.length);
+        for (var i = 0; i < all.length; i++) {
+          m[i] = mysteryClueHolds(clue, all[i]) ? 1 : 0;
+        }
+        return m;
+      });
+      function countWith(base, extra) {
+        var cnt = 0;
+        for (var i = 0; i < all.length; i++) {
+          if (base[i] && (extra === null || extra[i])) cnt++;
+        }
+        return cnt;
+      }
+
+      var current = new Uint8Array(all.length).fill(1);
+      var remaining = all.length;
+      var usedIdx = {};
+      var chosenIdx = [];
+
+      // Greedy: repeatedly add the true clue that eliminates the
+      // most remaining candidate assignments, until one is left.
+      while (remaining > 1) {
+        var best = -1, bestCount = Infinity;
+        for (var ci = 0; ci < pool.length; ci++) {
+          if (usedIdx[ci]) continue;
+          var cnt = countWith(current, masks[ci]);
+          if (cnt >= 1 && cnt < bestCount) { bestCount = cnt; best = ci; }
+        }
+        if (best === -1 || bestCount >= remaining) break; // no progress (should not happen)
+        usedIdx[best] = true;
+        chosenIdx.push(best);
+        for (var k = 0; k < all.length; k++) current[k] = current[k] && masks[best][k] ? 1 : 0;
+        remaining = bestCount;
+      }
+      if (remaining !== 1) continue; // try a fresh case
+
+      // Top up to at least MIN_CLUES with the most restrictive
+      // remaining true clues (keeps the set feeling substantial).
+      while (chosenIdx.length < MIN_CLUES) {
+        var addBest = -1, addCount = Infinity;
+        for (var cj = 0; cj < pool.length; cj++) {
+          if (usedIdx[cj]) continue;
+          var own = 0;
+          for (var q = 0; q < all.length; q++) if (masks[cj][q]) own++;
+          if (own < addCount) { addCount = own; addBest = cj; }
+        }
+        if (addBest === -1) break;
+        usedIdx[addBest] = true;
+        chosenIdx.push(addBest);
+      }
+
+      // Trim: drop any clue whose removal keeps the solution unique,
+      // without going below MIN_CLUES — leaves a lean, necessary-ish set.
+      var trimmed = true;
+      while (trimmed && chosenIdx.length > MIN_CLUES) {
+        trimmed = false;
+        for (var ti = 0; ti < chosenIdx.length; ti++) {
+          var testMask = new Uint8Array(all.length).fill(1);
+          chosenIdx.forEach(function (ix, pos) {
+            if (pos === ti) return;
+            var mk = masks[ix];
+            for (var z = 0; z < all.length; z++) testMask[z] = testMask[z] && mk[z] ? 1 : 0;
+          });
+          if (countWith(testMask, null) === 1) {
+            chosenIdx.splice(ti, 1);
+            trimmed = true;
+            break;
+          }
+        }
+      }
+      if (chosenIdx.length > MAX_CLUES) continue; // unusually wordy — regenerate
+
+      var clues = chosenIdx.map(function (ix) { return pool[ix]; });
+
+      // Final guarantee: the shipped solver must find exactly one
+      // solution, and it must be the hidden assignment.
+      var sols = solveMystery(names, weapons, rooms, clues, 2);
+      if (sols.length !== 1 || !sameAssignment(sols[0], assignment, names)) continue;
+
+      shuffle(clues, rng); // presentation order
+
+      var nameList = names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+      var story = setting.intro + ' The only people who could have done it were ' +
+        nameList + '. Each suspect had one of the weapons and was in one of the rooms. ' +
+        'Use the clues to work out who the culprit is, what they used, and where they were.';
+
+      return {
+        title: setting.caseTitle,
+        setting: setting.name,
+        victim: setting.victim,
+        story: story,
+        suspects: suspects,
+        weapons: weapons,
+        rooms: rooms,
+        clues: clues,
+        solution: {
+          culprit: culprit,
+          weapon: assignment.weaponOf[culprit],
+          room: assignment.roomOf[culprit]
+        },
+        assignment: assignment
+      };
+    }
+    throw new Error('generateMystery: could not build a unique-solution case');
+  }
+
   /* ---------------- Exports ---------------- */
 
   var PG = {
@@ -497,7 +861,12 @@
     sudokuIsSolvedValid: sudokuIsSolvedValid,
     SUDOKU_REMOVALS: SUDOKU_REMOVALS,
     generateMaze: generateMaze,
-    solveMaze: solveMaze
+    solveMaze: solveMaze,
+    MYSTERY_SETTINGS: MYSTERY_SETTINGS,
+    generateMystery: generateMystery,
+    solveMystery: solveMystery,
+    mysteryClueHolds: mysteryClueHolds,
+    mysteryHolderOf: mysteryHolderOf
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = PG;

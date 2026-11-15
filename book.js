@@ -17,9 +17,10 @@
     ws: 'Find all the listed words hidden in the grid. Words can run forwards, backwards, up, down or diagonally.',
     cw: 'Fill the grid using the clues. Answers read Across and Down.',
     su: 'Fill every row, column and 3 × 3 box with the numbers 1–9, using each number once per row, column and box.',
-    mz: 'Draw a path from the green start dot (top-left) to the red finish dot (bottom-right) without crossing any wall.'
+    mz: 'Draw a path from the green start dot (top-left) to the red finish dot (bottom-right) without crossing any wall.',
+    my: 'Read the case and the clues. Work out which suspect is the culprit, which weapon they had, and which room they were in. Mark ✓ or ✗ in the grids as you eliminate suspects.'
   };
-  var TYPE_TITLES = { ws: 'Word Search', cw: 'Crossword', su: 'Sudoku', mz: 'Maze' };
+  var TYPE_TITLES = { ws: 'Word Search', cw: 'Crossword', su: 'Sudoku', mz: 'Maze', my: 'Mystery Case' };
 
   function $(id) { return document.getElementById(id); }
 
@@ -44,9 +45,10 @@
       ws: clampCount($('bk-count-ws').value),
       cw: clampCount($('bk-count-cw').value),
       su: clampCount($('bk-count-su').value),
-      mz: clampCount($('bk-count-mz').value)
+      mz: clampCount($('bk-count-mz').value),
+      my: clampCount($('bk-count-my').value)
     };
-    var total = counts.ws + counts.cw + counts.su + counts.mz;
+    var total = counts.ws + counts.cw + counts.su + counts.mz + counts.my;
     if (total === 0) {
       $('bk-status').textContent = 'Set at least one puzzle count above zero.';
       return;
@@ -99,11 +101,15 @@
             data: PG.generateMaze(size, size, rng)
           });
         }
+        for (i = 0; i < counts.my; i++) {
+          var myCase = PG.generateMystery(rng);
+          puzzles.push({ type: 'my', label: myCase.title, data: myCase });
+        }
 
-        renderBook(title, author, trim, puzzles);
+        var pageCount = renderBook(title, author, trim, puzzles);
         $('bk-print').disabled = false;
         $('bk-status').textContent = 'Book ready: ' + puzzles.length + ' puzzles, ' +
-          (puzzles.length * 2 + 2) + ' pages total (title + puzzles + solutions divider + solutions). ' +
+          pageCount + ' pages total (title + puzzle pages + solutions divider + solution pages). ' +
           'Scroll down to preview, then click Download / Print PDF.';
         $('bk-output').innerHTML = '<p class="placeholder">✅ Book generated — preview is below the tool. ' +
           'Click <strong>Download / Print PDF</strong> to save it at ' + trim.label + '.</p>';
@@ -128,6 +134,9 @@
           '<p class="puzzle-meta">' + p.data.givens + ' clues · unique solution</p>';
       case 'mz':
         return Render.mazeSVG(p.data, { solution: solution });
+      case 'my':
+        return solution ? Render.mysteryAnswerHTML(p.data)
+                        : Render.mysteryHTML(p.data, {});
     }
     return '';
   }
@@ -156,15 +165,26 @@
         '</div>' +
       '</div>');
 
-    // puzzle pages
+    function pageShell(heading, instructions, bodyHtml, footerText) {
+      return '<div class="book-page" style="' + pageStyle + '">' +
+        '<h2 class="page-title">' + heading + '</h2>' +
+        (instructions ? '<p class="page-instructions">' + instructions + '</p>' : '') +
+        '<div class="page-body">' + bodyHtml + '</div>' +
+        '<p class="page-footer">' + footerText + '</p></div>';
+    }
+
+    // puzzle pages (a mystery case spans two pages: story, then clues + grids)
     puzzles.forEach(function (p, idx) {
-      pages.push(
-        '<div class="book-page" style="' + pageStyle + '">' +
-          '<h2 class="page-title">Puzzle ' + (idx + 1) + ' — ' + Render.esc(p.label) + '</h2>' +
-          '<p class="page-instructions">' + INSTRUCTIONS[p.type] + '</p>' +
-          '<div class="page-body">' + puzzleBody(p, false) + '</div>' +
-          '<p class="page-footer">' + Render.esc(title) + ' · Puzzle ' + (idx + 1) + '</p>' +
-        '</div>');
+      var heading = 'Puzzle ' + (idx + 1) + ' — ' + Render.esc(p.label);
+      var footer = Render.esc(title) + ' · Puzzle ' + (idx + 1);
+      if (p.type === 'my') {
+        pages.push(pageShell(heading, INSTRUCTIONS.my,
+          Render.mysteryHTML(p.data, { part: 'story' }), footer));
+        pages.push(pageShell(heading + ' (continued)', null,
+          Render.mysteryHTML(p.data, { part: 'grids' }), footer));
+      } else {
+        pages.push(pageShell(heading, INSTRUCTIONS[p.type], puzzleBody(p, false), footer));
+      }
     });
 
     // solutions divider
@@ -187,7 +207,8 @@
     var preview = $('book-preview');
     preview.innerHTML = pages.join('');
     preview.hidden = false;
+    return pages.length;
   }
 
-  window.BookBuilder = { init: init };
+  window.BookBuilder = { init: init, _renderBook: renderBook };
 })();

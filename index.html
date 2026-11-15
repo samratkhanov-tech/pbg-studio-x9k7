@@ -41,7 +41,7 @@
         <div class="brand-tag">Puzzle Book Generator</div>
       </div>
     </div>
-    <div class="header-note">Word Search · Crossword · Sudoku · Maze → print-ready KDP books</div>
+    <div class="header-note">Word Search · Crossword · Sudoku · Maze · Mystery → print-ready KDP books</div>
   </div>
 </header>
 
@@ -50,6 +50,7 @@
   <button class="tab" data-tab="crossword">Crossword</button>
   <button class="tab" data-tab="sudoku">Sudoku</button>
   <button class="tab" data-tab="maze">Maze</button>
+  <button class="tab" data-tab="mystery">Mystery</button>
   <button class="tab tab-book" data-tab="book">📕 Book Builder</button>
 </nav>
 
@@ -77,6 +78,7 @@
       <div class="btn-row">
         <button class="btn btn-primary" id="ws-generate">Generate</button>
         <button class="btn" id="ws-solution" disabled>Show Solution</button>
+        <button class="btn" id="ws-png" disabled>⬇ PNG</button>
       </div>
       <p class="hint" id="ws-status"></p>
     </div>
@@ -96,6 +98,7 @@
         <button class="btn btn-primary" id="cw-generate">Generate</button>
         <button class="btn" id="cw-example">Load Example Set</button>
         <button class="btn" id="cw-solution" disabled>Show Solution</button>
+        <button class="btn" id="cw-png" disabled>⬇ PNG</button>
       </div>
       <p class="hint" id="cw-status"></p>
     </div>
@@ -118,6 +121,7 @@
       <div class="btn-row">
         <button class="btn btn-primary" id="su-generate">Generate</button>
         <button class="btn" id="su-solution" disabled>Show Solution</button>
+        <button class="btn" id="su-png" disabled>⬇ PNG</button>
       </div>
       <p class="hint" id="su-status">Every puzzle is generated with a unique solution.</p>
     </div>
@@ -140,11 +144,34 @@
       <div class="btn-row">
         <button class="btn btn-primary" id="mz-generate">Generate</button>
         <button class="btn" id="mz-solution" disabled>Show Solution</button>
+        <button class="btn" id="mz-png" disabled>⬇ PNG</button>
       </div>
       <p class="hint">Start at the top-left, finish at the bottom-right. Every maze is guaranteed solvable.</p>
     </div>
     <div class="stage card">
       <div id="mz-output" class="output"><p class="placeholder">Click Generate for a fresh maze.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== MYSTERY ===== -->
+  <section class="panel" id="panel-mystery" hidden>
+    <div class="controls card">
+      <h2>Mystery — Whodunit Logic Puzzle</h2>
+      <label>Case size
+        <select id="my-size">
+          <option value="4" selected>Classic — 4 suspects</option>
+          <option value="5">Mastermind — 5 suspects</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="my-generate">Generate Case</button>
+        <button class="btn" id="my-solution" disabled>Show Solution</button>
+        <button class="btn" id="my-png" disabled>⬇ PNG</button>
+      </div>
+      <p class="hint" id="my-status">A fresh murder-mystery case: read the story, follow the clues, and work out the culprit, the weapon and the room. Every case is generated with a unique solution — the clues pin down exactly one answer.</p>
+    </div>
+    <div class="stage card">
+      <div id="my-output" class="output"><p class="placeholder">Click Generate Case for a fresh whodunit.</p></div>
     </div>
   </section>
 
@@ -170,6 +197,7 @@
         <label>Crossword <input type="number" id="bk-count-cw" min="0" max="100" value="3"></label>
         <label>Sudoku <input type="number" id="bk-count-su" min="0" max="100" value="5"></label>
         <label>Maze <input type="number" id="bk-count-mz" min="0" max="100" value="5"></label>
+        <label>Mystery cases <input type="number" id="bk-count-my" min="0" max="100" value="2"></label>
       </div>
       <label>Word Search theme
         <select id="bk-ws-theme"></select>
@@ -196,7 +224,7 @@
 
 </main>
 
-<footer class="site-footer">Songlap — AI Tools &amp; Digital Products · Puzzle Book Generator v1</footer>
+<footer class="site-footer">Songlap — AI Tools &amp; Digital Products · Puzzle Book Generator v3</footer>
 </div><!-- /#app -->
 
 <!-- Book pages render here for screen preview AND print -->
@@ -204,6 +232,7 @@
 
 <script src="generators.js"></script>
 <script src="render.js"></script>
+<script src="png.js"></script>
 <script src="app.js"></script>
 <script src="book.js"></script>
 </body>

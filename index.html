@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Puzzle Book Generator — Songlap</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ ACCESS GATE ============ -->
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-logo">🧩</div>
+    <h1>Puzzle Book Generator</h1>
+    <p class="lock-sub">A Songlap tool for KDP &amp; Etsy publishers.<br>
+    Enter your access code to unlock.</p>
+    <form id="lock-form">
+      <input type="text" id="lock-input" placeholder="Access code" autocomplete="off"
+             autocapitalize="characters" spellcheck="false">
+      <button type="submit" class="btn btn-gold">Unlock</button>
+    </form>
+    <p id="lock-error" class="lock-error" hidden>That code doesn't match. Check your delivery email and try again.</p>
+    <p class="lock-note">Your code was included with your purchase delivery.</p>
+  </div>
+</div>
+
+<!-- ============ APP (hidden until unlocked) ============ -->
+<div id="app" hidden>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-icon">🧩</span>
+      <div>
+        <div class="brand-name">SONGLAP</div>
+        <div class="brand-tag">Puzzle Book Generator</div>
+      </div>
+    </div>
+    <div class="header-note">Word Search · Crossword · Sudoku · Maze → print-ready KDP books</div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-tab="wordsearch">Word Search</button>
+  <button class="tab" data-tab="crossword">Crossword</button>
+  <button class="tab" data-tab="sudoku">Sudoku</button>
+  <button class="tab" data-tab="maze">Maze</button>
+  <button class="tab tab-book" data-tab="book">📕 Book Builder</button>
+</nav>
+
+<main class="layout">
+
+  <!-- ===== WORD SEARCH ===== -->
+  <section class="panel" id="panel-wordsearch">
+    <div class="controls card">
+      <h2>Word Search</h2>
+      <label>Theme
+        <select id="ws-theme"></select>
+      </label>
+      <label>Words (one per line — used when "Custom words" is selected, or edit the theme list)
+        <textarea id="ws-words" rows="9" spellcheck="false"></textarea>
+      </label>
+      <label>Grid size
+        <select id="ws-size">
+          <option value="10">10 × 10</option>
+          <option value="12">12 × 12</option>
+          <option value="15" selected>15 × 15</option>
+          <option value="18">18 × 18</option>
+          <option value="20">20 × 20</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="ws-generate">Generate</button>
+        <button class="btn" id="ws-solution" disabled>Show Solution</button>
+      </div>
+      <p class="hint" id="ws-status"></p>
+    </div>
+    <div class="stage card">
+      <div id="ws-output" class="output"><p class="placeholder">Pick a theme and click Generate.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== CROSSWORD ===== -->
+  <section class="panel" id="panel-crossword" hidden>
+    <div class="controls card">
+      <h2>Crossword</h2>
+      <label>Word + clue pairs (one per line, format: WORD | clue)
+        <textarea id="cw-entries" rows="11" spellcheck="false"></textarea>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="cw-generate">Generate</button>
+        <button class="btn" id="cw-example">Load Example Set</button>
+        <button class="btn" id="cw-solution" disabled>Show Solution</button>
+      </div>
+      <p class="hint" id="cw-status"></p>
+    </div>
+    <div class="stage card">
+      <div id="cw-output" class="output"><p class="placeholder">Click Generate to build the crossword.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== SUDOKU ===== -->
+  <section class="panel" id="panel-sudoku" hidden>
+    <div class="controls card">
+      <h2>Sudoku</h2>
+      <label>Difficulty
+        <select id="su-difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="su-generate">Generate</button>
+        <button class="btn" id="su-solution" disabled>Show Solution</button>
+      </div>
+      <p class="hint" id="su-status">Every puzzle is generated with a unique solution.</p>
+    </div>
+    <div class="stage card">
+      <div id="su-output" class="output"><p class="placeholder">Click Generate for a fresh Sudoku.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== MAZE ===== -->
+  <section class="panel" id="panel-maze" hidden>
+    <div class="controls card">
+      <h2>Maze</h2>
+      <label>Size
+        <select id="mz-size">
+          <option value="15">15 × 15</option>
+          <option value="21" selected>21 × 21</option>
+          <option value="31">31 × 31</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="mz-generate">Generate</button>
+        <button class="btn" id="mz-solution" disabled>Show Solution</button>
+      </div>
+      <p class="hint">Start at the top-left, finish at the bottom-right. Every maze is guaranteed solvable.</p>
+    </div>
+    <div class="stage card">
+      <div id="mz-output" class="output"><p class="placeholder">Click Generate for a fresh maze.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== BOOK BUILDER ===== -->
+  <section class="panel panel-book" id="panel-book" hidden>
+    <div class="controls card">
+      <h2>Book Builder</h2>
+      <label>Book title
+        <input type="text" id="bk-title" value="The Big Book of Puzzles">
+      </label>
+      <label>Author
+        <input type="text" id="bk-author" value="">
+      </label>
+      <label>Trim size (KDP)
+        <select id="bk-trim">
+          <option value="8.5x11" selected>8.5 × 11 in</option>
+          <option value="8x10">8 × 10 in</option>
+          <option value="6x9">6 × 9 in</option>
+        </select>
+      </label>
+      <div class="count-grid">
+        <label>Word Search <input type="number" id="bk-count-ws" min="0" max="100" value="5"></label>
+        <label>Crossword <input type="number" id="bk-count-cw" min="0" max="100" value="3"></label>
+        <label>Sudoku <input type="number" id="bk-count-su" min="0" max="100" value="5"></label>
+        <label>Maze <input type="number" id="bk-count-mz" min="0" max="100" value="5"></label>
+      </div>
+      <label>Word Search theme
+        <select id="bk-ws-theme"></select>
+      </label>
+      <label>Sudoku difficulty
+        <select id="bk-su-difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="bk-build">Generate Book</button>
+        <button class="btn btn-gold" id="bk-print" disabled>⬇ Download / Print PDF</button>
+      </div>
+      <p class="hint" id="bk-status">The book gets a title page, one puzzle per page, and a Solutions section at the back.
+      In the print dialog choose <strong>Save as PDF</strong>, set margins to <strong>None</strong> — the page size is set automatically to your trim size.</p>
+    </div>
+    <div class="stage card stage-book">
+      <div id="bk-output" class="output"><p class="placeholder">Set your counts and click Generate Book. The full book preview appears here.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">Songlap — AI Tools &amp; Digital Products · Puzzle Book Generator v1</footer>
+</div><!-- /#app -->
+
+<!-- Book pages render here for screen preview AND print -->
+<div id="book-preview" hidden></div>
+
+<script src="generators.js"></script>
+<script src="render.js"></script>
+<script src="app.js"></script>
+<script src="book.js"></script>
+</body>
+</html>

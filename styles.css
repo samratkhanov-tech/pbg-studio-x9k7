@@ -27,14 +27,24 @@ body {
 .lock-logo { font-size: 52px; }
 .lock-card h1 { margin: 8px 0 6px; font-size: 24px; color: #0f2027; }
 .lock-sub { color: #48626e; margin: 0 0 20px; line-height: 1.45; }
-#lock-form { display: flex; gap: 8px; }
-#lock-input {
-  flex: 1; padding: 12px 14px; font-size: 16px; letter-spacing: 1px;
-  border: 2px solid #c8d6dc; border-radius: 10px; text-transform: uppercase;
+#lock-form { display: flex; flex-direction: column; gap: 10px; }
+#lock-name, #lock-input {
+  padding: 12px 14px; font-size: 16px;
+  border: 2px solid #c8d6dc; border-radius: 10px;
 }
-#lock-input:focus { outline: none; border-color: #2c5364; }
+#lock-input { letter-spacing: 1px; text-transform: uppercase; }
+#lock-name:focus, #lock-input:focus { outline: none; border-color: #2c5364; }
+#lock-submit:disabled { opacity: .55; cursor: wait; }
 .lock-error { color: #c0392b; font-weight: 600; margin: 14px 0 0; }
 .lock-note { color: #7d97a1; font-size: 13px; margin: 16px 0 0; }
+
+/* ---------- License bar ---------- */
+.license-bar {
+  background: #0f2027; color: #ffd166; text-align: center;
+  font-size: 13px; font-weight: 600; letter-spacing: .4px;
+  padding: 7px 12px;
+}
+.license-bar[hidden] { display: none; }
 
 /* ---------- Header / tabs ---------- */
 .site-header {

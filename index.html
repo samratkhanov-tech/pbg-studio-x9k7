@@ -15,19 +15,22 @@
     <div class="lock-logo">🧩</div>
     <h1>Puzzle Book Generator</h1>
     <p class="lock-sub">A Songlap tool for KDP &amp; Etsy publishers.<br>
-    Enter your access code to unlock.</p>
+    Enter your name and your access code to unlock.</p>
     <form id="lock-form">
-      <input type="text" id="lock-input" placeholder="Access code" autocomplete="off"
+      <input type="text" id="lock-name" placeholder="Your name" autocomplete="name" spellcheck="false">
+      <input type="text" id="lock-input" placeholder="Your access code" autocomplete="off"
              autocapitalize="characters" spellcheck="false">
-      <button type="submit" class="btn btn-gold">Unlock</button>
+      <button type="submit" class="btn btn-gold" id="lock-submit">Unlock</button>
     </form>
-    <p id="lock-error" class="lock-error" hidden>That code doesn't match. Check your delivery email and try again.</p>
-    <p class="lock-note">Your code was included with your purchase delivery.</p>
+    <p id="lock-error" class="lock-error" hidden></p>
+    <p class="lock-note">Your name and code were included with your purchase delivery.</p>
   </div>
 </div>
 
 <!-- ============ APP (hidden until unlocked) ============ -->
 <div id="app" hidden>
+
+<div id="license-bar" class="license-bar" hidden>Licensed to: <span id="license-name"></span> · Code: <span id="license-code"></span></div>
 
 <header class="site-header">
   <div class="header-inner">

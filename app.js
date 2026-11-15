@@ -2,88 +2,59 @@
  * ============================================================
  *  Songlap Puzzle Book Generator — main app
  * ============================================================
- *  ACCESS CONTROL CONFIG
- *  ACCESS_CODE_HASH is the SHA-256 hash of the buyer access code.
- *  The plain code is NEVER stored in this file.
- *  >> Set from the plain code at launch; change the code by
- *     replacing this hash with the SHA-256 of the new code. <<
+ *  LICENSING CONFIG
+ *  Each buyer has a UNIQUE code, registered to their name by
+ *  the license server (Google Apps Script + Google Sheet —
+ *  see license/Code.gs). The app sends { name, code } to
+ *  LICENSE_API_URL and unlocks only when the server says ok.
+ *  >> After deploying the Apps Script web app, paste its URL
+ *     between the quotes below. That is the ONLY change needed
+ *     to go live; reset/free codes in the Google Sheet. <<
  * ============================================================
  */
-const ACCESS_CODE_HASH = 'e7baff636577e7c7520d0370bb1a589e65045d8933cdc412bc6e2ae2f73d9b12';
+const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwJSkfTRL2vwv2idTHUSGqUoEMt2euOYUV_yGE49X3Mlzce0T9ikqPDptIys0wpdDZ1kQ/exec";
+
+/* ---------- License response handling (pure, unit-tested) ---------- */
+
+var LICENSE_ERROR_MESSAGES = {
+  invalid_code: 'This code was not found. Please check the code from your purchase.',
+  code_registered_to_another_name: 'This code is already registered to another buyer. If this is your code, please contact support.',
+  missing_fields: 'Please enter both your name and your code.',
+  network: 'Could not verify your code. Please check your internet connection and try again.'
+};
+
+function licenseErrorMessage(errorCode) {
+  return LICENSE_ERROR_MESSAGES[errorCode] || LICENSE_ERROR_MESSAGES.network;
+}
+
+/* Turn a parsed license-server response into an app decision. */
+function interpretLicenseResponse(data) {
+  if (!data || typeof data !== 'object') {
+    return { action: 'error', message: licenseErrorMessage('network') };
+  }
+  if (data.ok === true) {
+    return { action: 'unlock', test: data.test === true };
+  }
+  return { action: 'error', message: licenseErrorMessage(data.error) };
+}
+
+/* Allow the Node test suite to exercise the pure logic above. */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    LICENSE_API_URL: LICENSE_API_URL,
+    LICENSE_ERROR_MESSAGES: LICENSE_ERROR_MESSAGES,
+    licenseErrorMessage: licenseErrorMessage,
+    interpretLicenseResponse: interpretLicenseResponse
+  };
+}
 
 (function () {
   'use strict';
 
-  /* ---------- SHA-256 (crypto.subtle, with pure-JS fallback for file://) ---------- */
+  /* ---------- License gate ---------- */
 
-  function sha256Sync(input) {
-    // Compact public-domain style SHA-256 (geraintluff algorithm).
-    // Input is UTF-8 encoded first so it matches crypto.subtle exactly.
-    var ascii = unescape(encodeURIComponent(input));
-    function rr(v, a) { return (v >>> a) | (v << (32 - a)); }
-    var maxWord = Math.pow(2, 32), result = '';
-    var words = [], asciiBitLength = ascii.length * 8;
-    var hash = sha256Sync.h = sha256Sync.h || [], k = sha256Sync.k = sha256Sync.k || [];
-    var primeCounter = k.length, isComposite = {};
-    for (var candidate = 2; primeCounter < 64; candidate++) {
-      if (!isComposite[candidate]) {
-        for (var i = 0; i < 313; i += candidate) isComposite[i] = candidate;
-        hash[primeCounter] = (Math.pow(candidate, 0.5) * maxWord) | 0;
-        k[primeCounter++] = (Math.pow(candidate, 1 / 3) * maxWord) | 0;
-      }
-    }
-    ascii += '\x80';
-    while (ascii.length % 64 - 56) ascii += '\x00';
-    for (var j = 0; j < ascii.length; j++) {
-      var code = ascii.charCodeAt(j) & 0xff;
-      words[j >> 2] |= code << ((3 - j) % 4) * 8;
-    }
-    words[words.length] = ((asciiBitLength / maxWord) | 0);
-    words[words.length] = asciiBitLength;
-    for (var block = 0; block < words.length;) {
-      var w = words.slice(block, block += 16), oldHash = hash;
-      hash = hash.slice(0, 8);
-      for (var t = 0; t < 64; t++) {
-        var w15 = w[t - 15], w2 = w[t - 2];
-        var a = hash[0], e = hash[4];
-        var temp1 = hash[7] +
-          (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) +
-          ((e & hash[5]) ^ ((~e) & hash[6])) + k[t] +
-          (w[t] = (t < 16) ? w[t] : (
-            w[t - 16] +
-            (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[t - 7] +
-            (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))
-          ) | 0);
-        var temp2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) +
-          ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
-        hash = [(temp1 + temp2) | 0].concat(hash);
-        hash[4] = (hash[4] + temp1) | 0;
-      }
-      for (var u = 0; u < 8; u++) hash[u] = (hash[u] + oldHash[u]) | 0;
-    }
-    for (var v = 0; v < 8; v++) {
-      for (var b = 3; b + 1; b--) {
-        var byte = (hash[v] >> (b * 8)) & 255;
-        result += ((byte < 16) ? '0' : '') + byte.toString(16);
-      }
-    }
-    return result;
-  }
-
-  function sha256Hex(text) {
-    if (window.crypto && crypto.subtle && window.isSecureContext) {
-      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-        .then(function (buf) {
-          return Array.from(new Uint8Array(buf))
-            .map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
-        });
-    }
-    return Promise.resolve(sha256Sync(text));
-  }
-
-  /* ---------- Access gate ---------- */
-
-  var SESSION_KEY = 'pbg_unlocked';
+  var NAME_KEY = 'pbg_license_name';
+  var CODE_KEY = 'pbg_license_code';
   var appStarted = false;
 
   function unlock() {
@@ -92,21 +63,74 @@ const ACCESS_CODE_HASH = 'e7baff636577e7c7520d0370bb1a589e65045d8933cdc412bc6e2a
     if (!appStarted) { appStarted = true; initApp(); }
   }
 
+  function showLicenseBar(name, code) {
+    document.getElementById('license-name').textContent = name;
+    document.getElementById('license-code').textContent = code;
+    document.getElementById('license-bar').hidden = false;
+  }
+
+  function storedLicense() {
+    try {
+      var name = sessionStorage.getItem(NAME_KEY);
+      var code = sessionStorage.getItem(CODE_KEY);
+      if (name && code) return { name: name, code: code };
+    } catch (e) { /* private mode */ }
+    return null;
+  }
+
   function initGate() {
-    var already = false;
-    try { already = sessionStorage.getItem(SESSION_KEY) === '1'; } catch (e) { /* private mode */ }
-    if (already) { unlock(); return; }
-    document.getElementById('lock-form').addEventListener('submit', function (ev) {
+    var saved = storedLicense();
+    if (saved) { showLicenseBar(saved.name, saved.code); unlock(); return; }
+
+    var form = document.getElementById('lock-form');
+    var nameInput = document.getElementById('lock-name');
+    var codeInput = document.getElementById('lock-input');
+    var button = document.getElementById('lock-submit');
+    var errorEl = document.getElementById('lock-error');
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.hidden = false;
+    }
+
+    function setChecking(checking) {
+      button.disabled = checking;
+      nameInput.disabled = checking;
+      codeInput.disabled = checking;
+      button.textContent = checking ? 'Checking…' : 'Unlock';
+    }
+
+    form.addEventListener('submit', function (ev) {
       ev.preventDefault();
-      var code = document.getElementById('lock-input').value.trim();
-      if (!code) return;
-      sha256Hex(code).then(function (hex) {
-        if (hex.toLowerCase() === ACCESS_CODE_HASH.toLowerCase()) {
-          try { sessionStorage.setItem(SESSION_KEY, '1'); } catch (e) { /* ignore */ }
+      var name = nameInput.value.trim().replace(/\s+/g, ' ');
+      var code = codeInput.value.trim().toUpperCase();
+      if (!name || !code) { showError(licenseErrorMessage('missing_fields')); return; }
+      errorEl.hidden = true;
+      setChecking(true);
+      // text/plain keeps this a "simple request" (no CORS preflight),
+      // which is what the Apps Script web app expects.
+      fetch(LICENSE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ name: name, code: code })
+      }).then(function (resp) {
+        return resp.json();
+      }).then(function (data) {
+        var result = interpretLicenseResponse(data);
+        setChecking(false);
+        if (result.action === 'unlock') {
+          try {
+            sessionStorage.setItem(NAME_KEY, name);
+            sessionStorage.setItem(CODE_KEY, code);
+          } catch (e) { /* ignore */ }
+          showLicenseBar(name, code);
           unlock();
         } else {
-          document.getElementById('lock-error').hidden = false;
+          showError(result.message);
         }
+      }).catch(function () {
+        setChecking(false);
+        showError(licenseErrorMessage('network'));
       });
     });
   }
@@ -293,7 +317,11 @@ const ACCESS_CODE_HASH = 'e7baff636577e7c7520d0370bb1a589e65045d8933cdc412bc6e2a
   }
 
   /* expose helpers for book.js */
-  window.AppUtil = { fillThemeSelect: fillThemeSelect, parseEntries: parseEntries, seedRng: seedRng };
+  if (typeof window !== 'undefined') {
+    window.AppUtil = { fillThemeSelect: fillThemeSelect, parseEntries: parseEntries, seedRng: seedRng };
+  }
 
-  document.addEventListener('DOMContentLoaded', initGate);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', initGate);
+  }
 })();

@@ -18,7 +18,7 @@
     cw: 'Fill the grid using the clues. Answers read Across and Down.',
     su: 'Fill every row, column and 3 × 3 box with the numbers 1–9, using each number once per row, column and box.',
     mz: 'Draw a path from the green start dot (top-left) to the red finish dot (bottom-right) without crossing any wall.',
-    my: 'Read the case and the clues. Work out which suspect is the culprit, which weapon they had, and which room they were in. Mark ✓ or ✗ in the grids as you eliminate suspects.'
+    my: 'Read the case, then use the clues to find the culprit, their weapon and their room. Mark ✓ or ✗ in the grids as you eliminate suspects.'
   };
   var TYPE_TITLES = { ws: 'Word Search', cw: 'Crossword', su: 'Sudoku', mz: 'Maze', my: 'Mystery Case' };
 
@@ -26,7 +26,14 @@
 
   function init(seedRng) {
     AppUtil.fillThemeSelect($('bk-ws-theme'), true);
-    $('bk-ws-theme').value = '__mixed';
+    // The Book Builder has no custom-words box (that lives on the Word
+    // Search tab), so drop the "Custom words" option here — leaving it
+    // would silently build the book with the Animals theme instead.
+    var themeSel = $('bk-ws-theme');
+    var customOpt = themeSel.querySelector
+      ? themeSel.querySelector('option[value="__custom"]') : null;
+    if (customOpt) customOpt.remove();
+    themeSel.value = '__mixed';
     $('bk-build').addEventListener('click', function () { buildBook(seedRng); });
     $('bk-print').addEventListener('click', function () { window.print(); });
   }
@@ -66,7 +73,10 @@
         var suChoice = $('bk-su-difficulty').value;
         var suCycle = ['easy', 'medium', 'hard'];
         var mzSizes = [21, 15, 31, 21, 25];
-        var wsSize = trim.w < 7 ? 15 : 15;
+        // One grid size at every trim. The page fit at the small trims is
+        // handled by the compact book word list in styles.css, not by
+        // shrinking the puzzle.
+        var wsSize = 15;
 
         var i, theme, diff;
         for (i = 0; i < counts.ws; i++) {
@@ -151,11 +161,14 @@
     document.head.appendChild(st);
 
     var pageStyle = 'width:' + trim.w + 'in;height:' + trim.h + 'in;padding:' + trim.pad + 'in;';
+    // Size class for trim-specific type tightening in styles.css
+    // (the 6 x 9 mystery story page needs it — see .trim-s rules).
+    var trimCls = trim.w < 7 ? 'trim-s' : (trim.w < 8.5 ? 'trim-m' : 'trim-l');
     var pages = [];
 
     // title page
     pages.push(
-      '<div class="book-page cover-page" style="' + pageStyle + '">' +
+      '<div class="book-page cover-page ' + trimCls + '" style="' + pageStyle + '">' +
         '<div class="cover-inner">' +
           '<div class="cover-puzzle-icon">🧩</div>' +
           '<h1 class="cover-title">' + Render.esc(title) + '</h1>' +
@@ -166,7 +179,7 @@
       '</div>');
 
     function pageShell(heading, instructions, bodyHtml, footerText) {
-      return '<div class="book-page" style="' + pageStyle + '">' +
+      return '<div class="book-page ' + trimCls + '" style="' + pageStyle + '">' +
         '<h2 class="page-title">' + heading + '</h2>' +
         (instructions ? '<p class="page-instructions">' + instructions + '</p>' : '') +
         '<div class="page-body">' + bodyHtml + '</div>' +
@@ -189,7 +202,7 @@
 
     // solutions divider
     pages.push(
-      '<div class="book-page divider-page" style="' + pageStyle + '">' +
+      '<div class="book-page divider-page ' + trimCls + '" style="' + pageStyle + '">' +
         '<div class="cover-inner"><h1 class="cover-title">Solutions</h1>' +
         '<p class="cover-count">Answers for all ' + puzzles.length + ' puzzles</p></div>' +
       '</div>');
@@ -197,7 +210,7 @@
     // solution pages
     puzzles.forEach(function (p, idx) {
       pages.push(
-        '<div class="book-page solution-page" style="' + pageStyle + '">' +
+        '<div class="book-page solution-page ' + trimCls + '" style="' + pageStyle + '">' +
           '<h2 class="page-title">Solution — Puzzle ' + (idx + 1) + ' (' + TYPE_TITLES[p.type] + ')</h2>' +
           '<div class="page-body">' + puzzleBody(p, true) + '</div>' +
           '<p class="page-footer">' + Render.esc(title) + ' · Solution ' + (idx + 1) + '</p>' +

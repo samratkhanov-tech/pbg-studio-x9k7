@@ -208,6 +208,21 @@ body {
   border-top: 1px solid #e1eaed; padding-top: 8px;
 }
 .book-page .maze-svg { max-height: 100%; }
+/* The book's word list must take the same height in every print engine:
+   a CSS-grid auto-fill track count is implemented inconsistently by print
+   engines (a 26-word list came out anywhere from 7 to 26 rows tall), so
+   book pages use multi-column flow instead — 130px columns, at most 4. */
+.book-page .word-list ul {
+  display: block;
+  column-width: 130px;
+  column-count: 4;
+  column-gap: 16px;
+}
+/* Clue columns: at the 6in trim two 260px columns no longer fit side by
+   side (2 x 260 + 26 gap > 480px content width) and stack, doubling the
+   clue area and pushing the page past the sheet. 200px keeps them paired
+   at every trim; wider pages are unchanged because the columns grow. */
+.book-page .clue-col { flex: 1 1 200px; }
 .book-page .su-grid { font-size: 15pt; }
 .book-page .mystery-case { max-width: 100%; }
 .book-page .mystery-story { padding: 13px 15px; }
@@ -222,6 +237,18 @@ body {
 }
 .book-page .answer-banner { font-size: 12.5pt; padding: 10px 14px; }
 .book-page .assignment-table th, .book-page .assignment-table td { font-size: 11pt; padding: 6px 10px; }
+/* Smallest trim (6 x 9, .trim-s): the mystery story page is the tallest
+   page in the book — story card + 4 suspects + weapon/room lists measured
+   ~81px taller than the sheet's body area, clipping the item lists behind
+   the footer. Tighten its type so the whole case fits one sheet. */
+.book-page.trim-s .page-instructions { margin-bottom: 10px; }
+.book-page.trim-s .mystery-story { padding: 10px 13px; }
+.book-page.trim-s .mystery-story h3 { font-size: 15px; margin-bottom: 6px; }
+.book-page.trim-s .mystery-story p { font-size: 10.5pt; line-height: 1.45; }
+.book-page.trim-s .mystery-case h4 { margin: 8px 0 5px; font-size: 12pt; }
+.book-page.trim-s .suspect-list { gap: 6px; }
+.book-page.trim-s .suspect-list li { padding: 5px 9px; font-size: 10.5pt; line-height: 1.4; }
+.book-page.trim-s .chip-list li { font-size: 10pt; padding: 2px 9px; }
 .cover-page, .divider-page { align-items: center; justify-content: center; text-align: center; }
 .cover-inner { margin: auto; }
 .cover-puzzle-icon { font-size: 64px; }
@@ -238,6 +265,7 @@ body {
   .book-page {
     margin: 0; box-shadow: none;
     page-break-after: always; break-after: page;
+    page-break-inside: avoid; break-inside: avoid;
   }
   .book-page:last-child { page-break-after: auto; break-after: auto; }
 }

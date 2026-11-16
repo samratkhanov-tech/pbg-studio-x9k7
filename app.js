@@ -71,8 +71,8 @@ if (typeof module !== 'undefined' && module.exports) {
 
   function storedLicense() {
     try {
-      var name = sessionStorage.getItem(NAME_KEY);
-      var code = sessionStorage.getItem(CODE_KEY);
+      var name = localStorage.getItem(NAME_KEY);
+      var code = localStorage.getItem(CODE_KEY);
       if (name && code) return { name: name, code: code };
     } catch (e) { /* private mode */ }
     return null;
@@ -120,8 +120,8 @@ if (typeof module !== 'undefined' && module.exports) {
         setChecking(false);
         if (result.action === 'unlock') {
           try {
-            sessionStorage.setItem(NAME_KEY, name);
-            sessionStorage.setItem(CODE_KEY, code);
+            localStorage.setItem(NAME_KEY, name);
+            localStorage.setItem(CODE_KEY, code);
           } catch (e) { /* ignore */ }
           showLicenseBar(name, code);
           unlock();

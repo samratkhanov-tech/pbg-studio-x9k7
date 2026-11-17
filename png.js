@@ -269,6 +269,7 @@
     canvas.height = plan.height;
     var ctx = canvas.getContext('2d');
     plan.ops.forEach(function (op) {
+      ctx.globalAlpha = op.alpha != null ? op.alpha : 1;
       switch (op.t) {
         case 'bg':
           ctx.fillStyle = op.color;
@@ -316,6 +317,7 @@
           ctx.fillText(op.str, op.x, op.y);
           break;
       }
+      ctx.globalAlpha = 1;
     });
     return canvas;
   }

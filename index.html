@@ -51,6 +51,7 @@
   <button class="tab" data-tab="sudoku">Sudoku</button>
   <button class="tab" data-tab="maze">Maze</button>
   <button class="tab" data-tab="mystery">Mystery</button>
+  <button class="tab" data-tab="cover">🎨 Cover</button>
   <button class="tab tab-book" data-tab="book">📕 Book Builder</button>
 </nav>
 
@@ -175,6 +176,50 @@
     </div>
   </section>
 
+  <!-- ===== COVER MAKER ===== -->
+  <section class="panel" id="panel-cover" hidden>
+    <div class="controls card">
+      <h2>Cover Maker</h2>
+      <label>Book title
+        <input type="text" id="cv-title" value="The Big Book of Puzzles">
+      </label>
+      <label>Subtitle (optional)
+        <input type="text" id="cv-subtitle" value="Hours of Brain-Teasing Fun for Puzzle Lovers">
+      </label>
+      <label>Your name / brand (shown as “by …”)
+        <input type="text" id="cv-author" value="" placeholder="e.g. Jane Smith">
+      </label>
+      <label>Design theme
+        <span class="cv-themes" id="cv-themes"></span>
+      </label>
+      <label>Puzzle types line (shown on the cover)
+        <input type="text" id="cv-types" value="Word Search • Crossword • Sudoku • Maze • Mystery">
+      </label>
+      <label>Puzzle count (for the “PUZZLES!” badge)
+        <input type="number" id="cv-count" min="0" max="100000" value="100">
+      </label>
+      <label>Cover size (for the PNG download)
+        <select id="cv-trim">
+          <option value="8.5x11" selected>8.5 × 11 in</option>
+          <option value="8x10">8 × 10 in</option>
+          <option value="6x9">6 × 9 in</option>
+        </select>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-gold" id="cv-png">⬇ Download Cover PNG (300 DPI)</button>
+      </div>
+      <p class="hint" id="cv-status">Your cover is saved automatically and is used as
+      <strong>page 1 of every book</strong> you build in the Book Builder (pick the
+      <em>Plain</em> theme there if you prefer the classic title page). In the Book Builder,
+      the book's own title and author are used, and the badge shows the real puzzle count.</p>
+    </div>
+    <div class="stage card">
+      <div id="cv-output" class="output">
+        <div class="cv-preview-wrap" id="cv-preview-wrap"><div id="cv-preview"></div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== BOOK BUILDER ===== -->
   <section class="panel panel-book" id="panel-book" hidden>
     <div class="controls card">
@@ -214,7 +259,8 @@
         <button class="btn btn-primary" id="bk-build">Generate Book</button>
         <button class="btn btn-gold" id="bk-print" disabled>⬇ Download / Print PDF</button>
       </div>
-      <p class="hint" id="bk-status">The book gets a title page, one puzzle per page, and a Solutions section at the back.
+      <p class="hint">Cover design: <strong id="bk-cover-name">Midnight Teal</strong> — change it any time on the 🎨 Cover tab.</p>
+      <p class="hint" id="bk-status">The book gets your designed cover as page 1, one puzzle per page, and a Solutions section at the back.
       In the print dialog choose <strong>Save as PDF</strong>, set margins to <strong>None</strong> — the page size is set automatically to your trim size.</p>
     </div>
     <div class="stage card stage-book">
@@ -233,6 +279,7 @@
 <script src="generators.js"></script>
 <script src="render.js"></script>
 <script src="png.js"></script>
+<script src="cover.js"></script>
 <script src="app.js"></script>
 <script src="book.js"></script>
 </body>

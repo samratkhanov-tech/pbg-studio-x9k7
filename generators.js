@@ -181,58 +181,112 @@
     });
     entries.sort(function (a, b) { return b.word.length - a.word.length; });
 
-    var grid = [];
-    for (var r = 0; r < size; r++) grid.push(new Array(size).fill(null));
-    var placements = [];
-    var placedWords = {};
-
-    function placeFirst(entry) {
-      var row = Math.floor(size / 2);
-      var col = Math.floor((size - entry.word.length) / 2);
-      cwPut(grid, entry.word, row, col, 0, 1);
-      placements.push({ word: entry.word, clue: entry.clue, row: row, col: col, dir: 'A' });
-      placedWords[entry.word] = true;
+    function shuffledEntries() {
+      var a = entries.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(rng() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
     }
 
-    function tryPlace(entry) {
-      var best = null;
-      placements.forEach(function (p) {
-        var pdr = p.dir === 'A' ? 0 : 1, pdc = p.dir === 'A' ? 1 : 0;
-        var dr = pdc, dc = pdr; // perpendicular
-        for (var k = 0; k < p.word.length; k++) {
-          var cellLetter = p.word[k];
-          var cellR = p.row + pdr * k, cellC = p.col + pdc * k;
-          for (var i = 0; i < entry.word.length; i++) {
-            if (entry.word[i] !== cellLetter) continue;
-            var sr = cellR - dr * i, sc = cellC - dc * i;
-            var crosses = cwCanPlace(grid, size, entry.word, sr, sc, dr, dc, true);
-            if (crosses < 0) continue;
-            var centerDist = Math.abs(sr + dr * entry.word.length / 2 - size / 2) +
-                             Math.abs(sc + dc * entry.word.length / 2 - size / 2);
-            var score = crosses * 100 - centerDist;
-            if (!best || score > best.score) {
-              best = { row: sr, col: sc, dr: dr, dc: dc, score: score };
+    /* One full placement attempt over `order`. Returns its grid,
+       placements and total crossing count. */
+    function attemptPlacement(order) {
+      var grid = [];
+      for (var r = 0; r < size; r++) grid.push(new Array(size).fill(null));
+      var placements = [];
+      var placedWords = {};
+      var totalCrosses = 0;
+
+      function placeFirst(entry) {
+        var row = Math.floor(size / 2);
+        var col = Math.floor((size - entry.word.length) / 2);
+        cwPut(grid, entry.word, row, col, 0, 1);
+        placements.push({ word: entry.word, clue: entry.clue, row: row, col: col, dir: 'A' });
+        placedWords[entry.word] = true;
+      }
+
+      function tryPlace(entry) {
+        var best = null;
+        placements.forEach(function (p) {
+          var pdr = p.dir === 'A' ? 0 : 1, pdc = p.dir === 'A' ? 1 : 0;
+          var dr = pdc, dc = pdr; // perpendicular
+          for (var k = 0; k < p.word.length; k++) {
+            var cellLetter = p.word[k];
+            var cellR = p.row + pdr * k, cellC = p.col + pdc * k;
+            for (var i = 0; i < entry.word.length; i++) {
+              if (entry.word[i] !== cellLetter) continue;
+              var sr = cellR - dr * i, sc = cellC - dc * i;
+              var crosses = cwCanPlace(grid, size, entry.word, sr, sc, dr, dc, true);
+              if (crosses < 0) continue;
+              var centerDist = Math.abs(sr + dr * entry.word.length / 2 - size / 2) +
+                               Math.abs(sc + dc * entry.word.length / 2 - size / 2);
+              var score = crosses * 100 - centerDist;
+              if (!best || score > best.score) {
+                best = { row: sr, col: sc, dr: dr, dc: dc, score: score, crosses: crosses };
+              }
             }
           }
+        });
+        if (!best) return false;
+        cwPut(grid, entry.word, best.row, best.col, best.dr, best.dc);
+        placements.push({
+          word: entry.word, clue: entry.clue, row: best.row, col: best.col,
+          dir: best.dr === 0 ? 'A' : 'D'
+        });
+        placedWords[entry.word] = true;
+        totalCrosses += best.crosses;
+        return true;
+      }
+
+      if (order.length) placeFirst(order[0]);
+      // repeated passes so words that failed early can cross words placed later
+      for (var pass = 0; pass < 3; pass++) {
+        order.forEach(function (e) {
+          if (!placedWords[e.word]) tryPlace(e);
+        });
+        if (placements.length === order.length) break;
+      }
+      // bounding-box area of the letters (drives the printed grid size)
+      var aMinR = size, aMaxR = -1, aMinC = size, aMaxC = -1;
+      for (var br2 = 0; br2 < size; br2++) {
+        for (var bc2 = 0; bc2 < size; bc2++) {
+          if (grid[br2][bc2]) {
+            if (br2 < aMinR) aMinR = br2; if (br2 > aMaxR) aMaxR = br2;
+            if (bc2 < aMinC) aMinC = bc2; if (bc2 > aMaxC) aMaxC = bc2;
+          }
         }
-      });
-      if (!best) return false;
-      cwPut(grid, entry.word, best.row, best.col, best.dr, best.dc);
-      placements.push({
-        word: entry.word, clue: entry.clue, row: best.row, col: best.col,
-        dir: best.dr === 0 ? 'A' : 'D'
-      });
-      placedWords[entry.word] = true;
-      return true;
+      }
+      var area = aMaxR < 0 ? 0 : (aMaxR - aMinR + 1) * (aMaxC - aMinC + 1);
+      return { grid: grid, placements: placements, placedWords: placedWords, crosses: totalCrosses, area: area };
     }
 
-    if (entries.length) placeFirst(entries[0]);
-    // two passes so words that failed early can cross words placed later
-    for (var pass = 0; pass < 2; pass++) {
-      entries.forEach(function (e) {
-        if (!placedWords[e.word]) tryPlace(e);
-      });
+    // A single greedy run can strand short words that share few letters
+    // with the set (e.g. DATE, FIG, KIWI). Try the length-sorted order
+    // first, then many shuffled orders, and keep the attempt that places
+    // the most words — preferring, among equal placements, the most
+    // compact grid (a sprawling layout can outgrow the smaller book
+    // trims), then the most crossings. Stop early only on a fully placed
+    // AND compact result; otherwise use every attempt. Ordinary word
+    // sets then place fully; the unplaced list remains only as an honest
+    // last resort for sets that truly cannot fit.
+    var MAX_ATTEMPTS = 80;
+    var COMPACT_AREA = 169; // 13 x 13 — a fully placed grid this size fits every trim
+    var bestAttempt = null;
+    for (var attemptNo = 0; attemptNo < MAX_ATTEMPTS; attemptNo++) {
+      var res = attemptPlacement(attemptNo === 0 ? entries : shuffledEntries());
+      if (!bestAttempt || res.placements.length > bestAttempt.placements.length ||
+          (res.placements.length === bestAttempt.placements.length && res.area < bestAttempt.area) ||
+          (res.placements.length === bestAttempt.placements.length && res.area === bestAttempt.area &&
+           res.crosses > bestAttempt.crosses)) {
+        bestAttempt = res;
+      }
+      if (bestAttempt.placements.length === entries.length && bestAttempt.area <= COMPACT_AREA) break;
     }
+    var grid = bestAttempt.grid;
+    var placements = bestAttempt.placements;
+    var placedWords = bestAttempt.placedWords;
     var unplaced = entries.filter(function (e) { return !placedWords[e.word]; })
       .map(function (e) { return e.word; });
 
@@ -521,7 +575,7 @@
       victim: 'Madame Olga Petrovna',
       intro: 'Madame Olga Petrovna, a retired opera singer travelling with a famous emerald, ' +
         'was found dead aboard the night train to Vienna. The train had not stopped since ' +
-        'midnight, so the culprit was still in the first-class carriage.',
+        'midnight, so the culprit was still aboard the train.',
       suspects: [
         { name: 'Mr. Henri Fabre', desc: 'a jewel dealer who had appraised the emerald that week' },
         { name: 'Miss Ingrid Halvorsen', desc: "the victim's travelling companion and former understudy" },
@@ -555,7 +609,7 @@
       victim: 'Professor Edmund Ashworth',
       intro: 'Professor Edmund Ashworth, founder of the Ashworth Museum, was found dead among ' +
         'the exhibits on the night of the annual gala. The alarm had been set at midnight, ' +
-        'so the culprit was one of the few people still inside.',
+        'so the culprit was one of the few people still on the premises.',
       suspects: [
         { name: 'Dr. Miriam Solano', desc: 'the curator of antiquities, passed over for the directorship' },
         { name: 'Mr. Nathaniel Pryce', desc: 'an art dealer whose prize exhibit the victim had called a forgery' },

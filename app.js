@@ -152,6 +152,7 @@ if (typeof module !== 'undefined' && module.exports) {
     initSudoku();
     initMaze();
     initMystery();
+    initCover();
     if (window.BookBuilder) BookBuilder.init(seedRng);
     // friendly first screen: pre-generate a word search
     $('ws-generate').click();
@@ -380,6 +381,115 @@ if (typeof module !== 'undefined' && module.exports) {
   function drawMaze() {
     if (!state.mz) return;
     $('mz-output').innerHTML = Render.mazeSVG(state.mz, { solution: state.mzShow });
+  }
+
+  /* ----- Cover Maker ----- */
+
+  var coverState = { theme: 'midnight' };
+
+  function coverSettingsFromForm() {
+    return CoverMaker.normalizeSettings({
+      title: $('cv-title').value,
+      subtitle: $('cv-subtitle').value,
+      author: $('cv-author').value,
+      theme: coverState.theme,
+      typesLine: $('cv-types').value,
+      count: $('cv-count').value
+    });
+  }
+
+  function refreshBookCoverNote() {
+    var note = $('bk-cover-name');
+    if (note && window.CoverMaker) {
+      note.textContent = CoverMaker.THEMES[coverState.theme].name;
+    }
+  }
+
+  function drawCoverPreview() {
+    var s = coverSettingsFromForm();
+    var trim = CoverMaker.TRIMS[$('cv-trim').value] || CoverMaker.TRIMS['8.5x11'];
+    var trimCls = trim.w < 7 ? 'trim-s' : (trim.w < 8.5 ? 'trim-m' : 'trim-l');
+    var pageStyle = 'width:' + trim.w + 'in;height:' + trim.h + 'in;padding:0;';
+    var html;
+    if (s.theme === 'plain') {
+      html = '<div class="book-page cover-page ' + trimCls + '" style="' +
+        'width:' + trim.w + 'in;height:' + trim.h + 'in;padding:0.65in;">' +
+        '<div class="cover-inner"><div class="cover-puzzle-icon">🧩</div>' +
+        '<h1 class="cover-title">' + Render.esc(s.title) + '</h1>' +
+        (s.author.trim() ? '<p class="cover-author">by ' + Render.esc(s.author) + '</p>' : '') +
+        '<p class="cover-count">' + s.count + ' puzzles with solutions</p>' +
+        '<p class="cover-brand">SONGLAP</p></div></div>';
+    } else {
+      html = '<div class="book-page cover-page designed-cover ' + trimCls + '" style="' + pageStyle + '">' +
+        CoverMaker.coverHTML(s, { count: s.count }) + '</div>';
+    }
+    // scale the full-size page down to fit the stage (~520px wide)
+    var scale = Math.min(1, 520 / (trim.w * 96));
+    var wrap = $('cv-preview-wrap');
+    wrap.style.width = Math.round(trim.w * 96 * scale) + 'px';
+    wrap.style.height = Math.round(trim.h * 96 * scale) + 'px';
+    var preview = $('cv-preview');
+    preview.innerHTML = html;
+    var page = preview.firstElementChild;
+    if (page) page.style.transform = 'scale(' + scale + ')';
+  }
+
+  function onCoverInput() {
+    CoverMaker.saveSettings(coverSettingsFromForm());
+    drawCoverPreview();
+    refreshBookCoverNote();
+  }
+
+  function initCover() {
+    if (!window.CoverMaker) return;
+    var saved = CoverMaker.loadSettings();
+    coverState.theme = saved.theme;
+    $('cv-title').value = saved.title;
+    $('cv-subtitle').value = saved.subtitle;
+    $('cv-author').value = saved.author;
+    $('cv-types').value = saved.typesLine;
+    $('cv-count').value = saved.count;
+
+    // theme chips
+    var chips = $('cv-themes');
+    CoverMaker.THEME_ORDER.forEach(function (id) {
+      var t = CoverMaker.THEMES[id];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cv-chip' + (id === coverState.theme ? ' active' : '');
+      b.dataset.theme = id;
+      b.innerHTML = '<span class="cv-swatch" style="background:' + t.bg + '"></span>' +
+        '<span class="cv-chip-name">' + t.name + '</span>';
+      b.addEventListener('click', function () {
+        coverState.theme = id;
+        chips.querySelectorAll('.cv-chip').forEach(function (c) {
+          c.classList.toggle('active', c.dataset.theme === id);
+        });
+        onCoverInput();
+      });
+      chips.appendChild(b);
+    });
+
+    ['cv-title', 'cv-subtitle', 'cv-author', 'cv-types', 'cv-count'].forEach(function (id) {
+      $(id).addEventListener('input', onCoverInput);
+    });
+    $('cv-trim').addEventListener('change', drawCoverPreview);
+    $('cv-png').addEventListener('click', function () {
+      var s = coverSettingsFromForm();
+      CoverMaker.saveSettings(s);
+      if (s.theme === 'plain') {
+        $('cv-status').textContent = 'The Plain theme is the classic title page — ' +
+          'pick a designed theme to download a cover PNG.';
+        return;
+      }
+      CoverMaker.downloadCoverPNG(s, $('cv-trim').value);
+      $('cv-status').textContent = 'Cover PNG downloaded at 300 DPI (' +
+        $('cv-trim').value.replace('x', ' × ') + ' in). ' +
+        'Your design is also saved and used as page 1 in the Book Builder.';
+    });
+
+    drawCoverPreview();
+    refreshBookCoverNote();
   }
 
   /* expose helpers for book.js */

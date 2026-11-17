@@ -257,6 +257,89 @@ body {
 .cover-count { font-size: 14px; color: #48626e; }
 .cover-brand { margin-top: 34px; letter-spacing: 4px; font-weight: 800; color: #b98a1d; font-size: 15px; }
 
+/* ---------- Designed cover (Cover Maker) ---------- */
+/* The frame fills the whole sheet (the page is emitted with padding:0);
+   colours come inline from the chosen theme, layout lives here. All
+   cover content is vertically centred in a fixed stack, so the page can
+   never overflow: the tallest stack (4-line title + subtitle + types +
+   author) is modelled in tests/test_cover.js. */
+.cover-frame {
+  position: relative; width: 100%; height: 100%; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.cover-frame::after {
+  content: ''; position: absolute; inset: 14px;
+  border: 3px solid currentColor; opacity: .35; pointer-events: none;
+}
+.cover-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover-content { position: relative; z-index: 1; padding: 12% 10% 16%; max-width: 100%; }
+.cover-title-big {
+  margin: 0; font-weight: 800; text-transform: uppercase;
+  line-height: 1.04; letter-spacing: 1px; font-size: 58px;
+  text-shadow: 0 3px 14px rgba(0,0,0,.25);
+}
+.cover-title-big.cv-t2 { font-size: 47px; }
+.cover-title-big.cv-t3 { font-size: 38px; }
+.book-page.trim-m .cover-title-big { font-size: 52px; }
+.book-page.trim-m .cover-title-big.cv-t2 { font-size: 42px; }
+.book-page.trim-m .cover-title-big.cv-t3 { font-size: 34px; }
+.book-page.trim-s .cover-title-big { font-size: 41px; }
+.book-page.trim-s .cover-title-big.cv-t2 { font-size: 34px; }
+.book-page.trim-s .cover-title-big.cv-t3 { font-size: 28px; }
+.cover-subtitle { font-size: 19px; margin: 20px 0 0; line-height: 1.4; font-weight: 600; }
+.book-page.trim-m .cover-subtitle { font-size: 17px; }
+.book-page.trim-s .cover-subtitle { font-size: 14.5px; margin-top: 14px; }
+.cover-flourish { font-size: 20px; margin: 22px 0 0; letter-spacing: 8px; }
+.book-page.trim-s .cover-flourish { font-size: 16px; margin-top: 15px; }
+.cover-types {
+  font-size: 16.5px; font-weight: 800; letter-spacing: 2.5px;
+  margin: 16px 0 0; line-height: 1.6; text-transform: uppercase;
+}
+.book-page.trim-m .cover-types { font-size: 15px; }
+.book-page.trim-s .cover-types { font-size: 12.5px; margin-top: 12px; }
+.cover-author-line { font-size: 21px; margin: 30px 0 0; }
+.book-page.trim-m .cover-author-line { font-size: 19px; }
+.book-page.trim-s .cover-author-line { font-size: 16px; margin-top: 22px; }
+.cover-badge {
+  position: absolute; top: 5.5%; right: 6%; z-index: 2;
+  width: 138px; height: 138px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transform: rotate(12deg);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
+  border: 3px dashed rgba(255,255,255,.55);
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.book-page.trim-m .cover-badge { width: 124px; height: 124px; }
+.book-page.trim-s .cover-badge { width: 98px; height: 98px; }
+.cover-badge-num { font-size: 37px; font-weight: 800; line-height: 1; }
+.book-page.trim-s .cover-badge-num { font-size: 27px; }
+.cover-badge-label { font-size: 16.5px; font-weight: 800; letter-spacing: 1px; margin-top: 3px; }
+.book-page.trim-s .cover-badge-label { font-size: 12.5px; }
+.cover-band {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 15px 10px; font-size: 17.5px; font-weight: 800; letter-spacing: 3.5px;
+  print-color-adjust: exact; -webkit-print-color-adjust: exact;
+}
+.book-page.trim-m .cover-band { font-size: 16px; padding: 13px 10px; }
+.book-page.trim-s .cover-band { font-size: 13.5px; padding: 11px 8px; letter-spacing: 2.5px; }
+
+/* ---------- Cover tab (screen) ---------- */
+.cv-themes { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.cv-chip {
+  border: 2px solid #c8d6dc; border-radius: 10px; padding: 5px 7px;
+  background: #fff; cursor: pointer; text-align: center; width: 86px;
+}
+.cv-chip .cv-swatch {
+  display: block; height: 34px; border-radius: 6px; margin-bottom: 4px;
+  border: 1px solid rgba(0,0,0,.18);
+}
+.cv-chip .cv-chip-name { font-size: 11.5px; font-weight: 700; color: #33505c; line-height: 1.25; display: block; }
+.cv-chip.active { border-color: #0f2027; box-shadow: 0 0 0 2px #ffd166; }
+.cv-preview-wrap { overflow: hidden; margin: 0 auto; position: relative; }
+.cv-preview-wrap .book-page { transform-origin: top left; margin: 0; }
+
 /* ---------- Print: only the book, at trim size ---------- */
 @media print {
   body { background: #fff; }

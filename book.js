@@ -116,10 +116,28 @@
           puzzles.push({ type: 'my', label: myCase.title, data: myCase });
         }
 
-        var pageCount = renderBook(title, author, trim, puzzles);
+        // Cover design from the Cover Maker tab: the book's own title and
+        // author win, the badge shows the real puzzle count, and the types
+        // line lists only the puzzle types actually in this book.
+        var cover = null;
+        if (typeof CoverMaker !== 'undefined') {
+          var cs = CoverMaker.loadSettings();
+          var typeNames = [];
+          if (counts.ws) typeNames.push('Word Search');
+          if (counts.cw) typeNames.push('Crossword');
+          if (counts.su) typeNames.push('Sudoku');
+          if (counts.mz) typeNames.push('Maze');
+          if (counts.my) typeNames.push('Mystery');
+          cover = {
+            title: title, author: author, subtitle: cs.subtitle,
+            theme: cs.theme, typesLine: typeNames.join(' • '), count: total
+          };
+        }
+
+        var pageCount = renderBook(title, author, trim, puzzles, cover);
         $('bk-print').disabled = false;
         $('bk-status').textContent = 'Book ready: ' + puzzles.length + ' puzzles, ' +
-          pageCount + ' pages total (title + puzzle pages + solutions divider + solution pages). ' +
+          pageCount + ' pages total (cover + puzzle pages + solutions divider + solution pages). ' +
           'Scroll down to preview, then click Download / Print PDF.';
         $('bk-output').innerHTML = '<p class="placeholder">✅ Book generated — preview is below the tool. ' +
           'Click <strong>Download / Print PDF</strong> to save it at ' + trim.label + '.</p>';
@@ -151,7 +169,7 @@
     return '';
   }
 
-  function renderBook(title, author, trim, puzzles) {
+  function renderBook(title, author, trim, puzzles, cover) {
     // @page rule for the chosen trim size
     var old = document.getElementById('page-style');
     if (old) old.remove();
@@ -166,17 +184,28 @@
     var trimCls = trim.w < 7 ? 'trim-s' : (trim.w < 8.5 ? 'trim-m' : 'trim-l');
     var pages = [];
 
-    // title page
-    pages.push(
-      '<div class="book-page cover-page ' + trimCls + '" style="' + pageStyle + '">' +
-        '<div class="cover-inner">' +
-          '<div class="cover-puzzle-icon">🧩</div>' +
-          '<h1 class="cover-title">' + Render.esc(title) + '</h1>' +
-          (author ? '<p class="cover-author">by ' + Render.esc(author) + '</p>' : '') +
-          '<p class="cover-count">' + puzzles.length + ' puzzles with solutions</p>' +
-          '<p class="cover-brand">SONGLAP</p>' +
-        '</div>' +
-      '</div>');
+    // page 1: the designed cover from the Cover Maker (full-bleed, no
+    // padding — the frame fills the sheet), or the classic plain title
+    // page when the Plain theme is chosen / no cover settings are given.
+    if (cover && cover.theme && cover.theme !== 'plain' &&
+        typeof CoverMaker !== 'undefined') {
+      pages.push(
+        '<div class="book-page cover-page designed-cover ' + trimCls + '" style="' +
+          'width:' + trim.w + 'in;height:' + trim.h + 'in;padding:0;">' +
+          CoverMaker.coverHTML(cover, { count: puzzles.length }) +
+        '</div>');
+    } else {
+      pages.push(
+        '<div class="book-page cover-page ' + trimCls + '" style="' + pageStyle + '">' +
+          '<div class="cover-inner">' +
+            '<div class="cover-puzzle-icon">🧩</div>' +
+            '<h1 class="cover-title">' + Render.esc(title) + '</h1>' +
+            (author ? '<p class="cover-author">by ' + Render.esc(author) + '</p>' : '') +
+            '<p class="cover-count">' + puzzles.length + ' puzzles with solutions</p>' +
+            '<p class="cover-brand">SONGLAP</p>' +
+          '</div>' +
+        '</div>');
+    }
 
     function pageShell(heading, instructions, bodyHtml, footerText) {
       return '<div class="book-page ' + trimCls + '" style="' + pageStyle + '">' +
